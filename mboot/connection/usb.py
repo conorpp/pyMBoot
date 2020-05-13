@@ -29,6 +29,7 @@ USB_DEVICES = {
     # NAME   | VID   | PID
     'MKL27': (0x15A2, 0x0073),
     'LPC55': (0x1FC9, 0x0021),
+    'Solo': (0x1209, 0xB000),
     'IMXRT': (0x1FC9, 0x0135)
 }
 
