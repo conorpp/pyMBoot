@@ -10,6 +10,7 @@ import click
 import bincopy
 import traceback
 
+import mboot
 from mboot import McuBoot, scan_usb, ExtMemId, CommandTag, PropertyTag, parse_property_value
 
 
@@ -182,7 +183,7 @@ class ImgFile(click.ParamType):
         return 'FILE'
 
     def convert(self, value, param, ctx):
-        if not value.lower().endswith(self.valid_extensions):
+        if not value.lower().endswith(self.valid_extensions[0]):
             self.fail('Unsupported file type: *.{} !'.format(value.split('.')[-1]), param, ctx)
 
         if self.exists and not os.path.lexists(value):
@@ -446,13 +447,21 @@ def write(ctx, address, offset, mtype, erase, verify, file):
         with McuBoot(device, True) as mb:
             # Read Flash Sector Size of connected MCU
             flash_sector_size = mb.get_property(PropertyTag.FLASH_SECTOR_SIZE, mem_id)[0]
+            # flash_sector_size = mb.get_property(PropertyTag.FLASH_SECTOR_SIZE, mem_id)[0]
             # Align Erase Start Address and Len to Flash Sector Size
             start_address = (address & ~(flash_sector_size - 1))
             length = (len(data) & ~(flash_sector_size - 1))
             if (len(data) % flash_sector_size) > 0:
                 length += flash_sector_size
             # Erase specified region in MCU Flash memory
-            mb.flash_erase_region(start_address, length, mem_id)
+            try:
+                mb.flash_erase_region(start_address, length, mem_id)
+            except mboot.exceptions.McuBootCommandError as e:
+                if e.error_value == mboot.errorcodes.StatusCode.MEMORY_RANGE_INVALID:
+                    pass
+                else:
+                    raise(e)
+
             # Write data into MCU Flash memory
             mb.write_memory(address, data, mem_id)
 
