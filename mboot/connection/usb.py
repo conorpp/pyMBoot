@@ -4,14 +4,14 @@
 # The BSD-3-Clause license for this file can be found in the LICENSE file included with this distribution
 # or at https://spdx.org/licenses/BSD-3-Clause.html#licenseText
 
-
+import sys
 import os
 import logging
 import collections
 from time import time
 from struct import pack, unpack_from
 
-from fido2._pyu2f import hid
+from fido2._pyu2f import hid, windows
 
 from .base import DevConnBase
 from ..commands import CmdPacket, parse_cmd_response
@@ -109,6 +109,12 @@ class RawHid(DevConnBase):
         """ open the interface """
         self.dev = hid.Open(self.device_info['path'])
         self.is_opened = True
+        if sys.platform.startswith('win32'):
+            # monkey patch in our implementation that doesn't fix the report id to 0
+            self.dev.GetInReportDataLength = type(self.dev.GetInReportDataLength) (Win32GetInReportDataLength, self.dev)
+            self.dev.GetOutReportDataLength = type(self.dev.GetOutReportDataLength) (Win32GetOutReportDataLength, self.dev)
+            self.dev.Write = type(self.dev.Write) (Win32Write, self.dev)
+            self.dev.Read = type(self.dev.Read ) (Win32Read, self.dev)
 
     def close(self):
         """ close the interface """
@@ -165,3 +171,50 @@ class RawHid(DevConnBase):
 
     def info(self):
         return f"{self.device_info['product_string']} - {self.device_info['path']}"
+
+
+# fido2 hid layer has the HID Report ID fixed to 0 for the windows implementation, but
+# MCU-Boot requires it to be different values at times.
+# So the relevant methods have been copied, and the fixing of the 0 report-id has been removed.
+def Win32GetInReportDataLength(self):
+    """See base class."""
+    return self.desc.internal_max_in_report_len
+
+def Win32GetOutReportDataLength(self):
+    """See base class."""
+    return self.desc.internal_max_out_report_len
+
+def Win32Write(self, packet):
+    """See base class."""
+    if len(packet) != self.GetOutReportDataLength():
+        raise OSError('Packet length must match report data length.')
+
+    out = bytes(bytearray(packet))  # Prepend the zero-byte (report ID)
+    num_written = windows.wintypes.DWORD()
+    ret = (
+        windows.kernel32.WriteFile(
+            self.dev, out, len(out),
+            windows.ctypes.byref(num_written), None))
+    if num_written.value != len(out):
+        raise OSError(
+            'Failed to write complete packet.  ' + 'Expected %d, but got %d' %
+            (len(out), num_written.value))
+    if not ret:
+        raise windows.ctypes.WinError()
+
+def Win32Read(self):
+    """See base class."""
+    buf = windows.ctypes.create_string_buffer(self.desc.internal_max_in_report_len)
+    num_read = windows.wintypes.DWORD()
+    ret = windows.kernel32.ReadFile(
+        self.dev, buf, len(buf), windows.ctypes.byref(num_read), None)
+
+    if num_read.value != self.desc.internal_max_in_report_len:
+        raise OSError('Failed to read full length report from device.')
+
+    if not ret:
+        raise windows.ctypes.WinError()
+
+    # Convert the string buffer to a list of numbers.  Throw away the first
+    # byte, which is the report id (which we don't care about).
+    return b''.join(buf)
