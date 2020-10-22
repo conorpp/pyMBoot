@@ -269,12 +269,8 @@ def info(ctx):
     properties = []
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            properties = mb.get_property_list()
-
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
+    with McuBoot(device, True) as mb:
+        properties = mb.get_property_list()
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -295,12 +291,8 @@ def mlist(ctx):
     mem_list = {}
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            mem_list = mb.get_memory_list()
-
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
+    with McuBoot(device, True) as mb:
+        mem_list = mb.get_memory_list()
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -361,22 +353,19 @@ def mconf(ctx, address, word, mtype, file):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            if address is None:
-                # get internal memory start address and size
-                memory_address = mb.get_property(PropertyTag.RAM_START_ADDRESS)[0]
-                memory_size = mb.get_property(PropertyTag.RAM_SIZE)[0]
-                # calculate address
-                address = memory_address + memory_size - len(memory_data)
-                # add additional offset 1024 Bytes
-                address -= 1024
+    with McuBoot(device, True) as mb:
+        if address is None:
+            # get internal memory start address and size
+            memory_address = mb.get_property(PropertyTag.RAM_START_ADDRESS)[0]
+            memory_size = mb.get_property(PropertyTag.RAM_SIZE)[0]
+            # calculate address
+            address = memory_address + memory_size - len(memory_data)
+            # add additional offset 1024 Bytes
+            address -= 1024
 
-            mb.write_memory(address, memory_data)
-            mb.configure_memory(memory_id, address)
+        mb.write_memory(address, memory_data)
+        mb.configure_memory(memory_id, address)
 
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -393,12 +382,8 @@ def sbfile(ctx, file):
     with open(file, 'rb') as f:
         sb_data = f.read()
 
-    try:
-        with McuBoot(device, True) as mb:
-            mb.receive_sb_file(sb_data)
-
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
+    with McuBoot(device, True) as mb:
+        mb.receive_sb_file(sb_data)
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -443,30 +428,27 @@ def write(ctx, address, offset, mtype, erase, verify, file):
     device = scan_interface(ctx.obj['TARGET'])
     click.echo(' Writing into MCU memory, please wait !\n')
 
-    try:
-        with McuBoot(device, True) as mb:
-            # Read Flash Sector Size of connected MCU
-            flash_sector_size = mb.get_property(PropertyTag.FLASH_SECTOR_SIZE, mem_id)[0]
-            # flash_sector_size = mb.get_property(PropertyTag.FLASH_SECTOR_SIZE, mem_id)[0]
-            # Align Erase Start Address and Len to Flash Sector Size
-            start_address = (address & ~(flash_sector_size - 1))
-            length = (len(data) & ~(flash_sector_size - 1))
-            if (len(data) % flash_sector_size) > 0:
-                length += flash_sector_size
-            # Erase specified region in MCU Flash memory
-            try:
-                mb.flash_erase_region(start_address, length, mem_id)
-            except mboot.exceptions.McuBootCommandError as e:
-                if e.error_value == mboot.errorcodes.StatusCode.MEMORY_RANGE_INVALID:
-                    pass
-                else:
-                    raise(e)
+    with McuBoot(device, True) as mb:
+        # Read Flash Sector Size of connected MCU
+        flash_sector_size = mb.get_property(PropertyTag.FLASH_SECTOR_SIZE, mem_id)[0]
+        # flash_sector_size = mb.get_property(PropertyTag.FLASH_SECTOR_SIZE, mem_id)[0]
+        # Align Erase Start Address and Len to Flash Sector Size
+        start_address = (address & ~(flash_sector_size - 1))
+        length = (len(data) & ~(flash_sector_size - 1))
+        if (len(data) % flash_sector_size) > 0:
+            length += flash_sector_size
+        # Erase specified region in MCU Flash memory
+        try:
+            mb.flash_erase_region(start_address, length, mem_id)
+        except mboot.exceptions.McuBootCommandError as e:
+            if e.error_value == mboot.errorcodes.StatusCode.MEMORY_RANGE_INVALID:
+                pass
+            else:
+                raise(e)
 
-            # Write data into MCU Flash memory
-            mb.write_memory(address, data, mem_id)
+        # Write data into MCU Flash memory
+        mb.write_memory(address, data, mem_id)
 
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -490,12 +472,8 @@ def read(ctx, address, length, mtype, compress, file):
 
     click.echo(" Reading from MCU memory, please wait ! \n")
 
-    try:
-        with McuBoot(device, True) as mb:
-            data = mb.read_memory(address, length, mem_id)
-
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
+    with McuBoot(device, True) as mb:
+        data = mb.read_memory(address, length, mem_id)
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -536,24 +514,21 @@ def erase(ctx, address, length, mass, mtype):
     mem_id = 0 if mtype == 'INTERNAL' else ExtMemId[mtype]
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            if mass:
-                values = mb.get_property(PropertyTag.AVAILABLE_COMMANDS)
-                commands = parse_property_value(PropertyTag.AVAILABLE_COMMANDS, values)
-                if CommandTag.FLASH_ERASE_ALL_UNSECURE in commands:
-                    mb.flash_erase_all_unsecure()
-                elif CommandTag.FLASH_ERASE_ALL in commands:
-                    mb.flash_erase_all(mem_id)
-                else:
-                    raise Exception('Not Supported Command')
+    with McuBoot(device, True) as mb:
+        if mass:
+            values = mb.get_property(PropertyTag.AVAILABLE_COMMANDS)
+            commands = parse_property_value(PropertyTag.AVAILABLE_COMMANDS, values)
+            if CommandTag.FLASH_ERASE_ALL_UNSECURE in commands:
+                mb.flash_erase_all_unsecure()
+            elif CommandTag.FLASH_ERASE_ALL in commands:
+                mb.flash_erase_all(mem_id)
             else:
-                if address is None or length is None:
-                    raise Exception("Argument \"-a, --address\" and \"-l, --length\" must be defined !")
-                mb.flash_erase_region(address, length, mem_id)
+                raise Exception('Not Supported Command')
+        else:
+            if address is None or length is None:
+                raise Exception("Argument \"-a, --address\" and \"-l, --length\" must be defined !")
+            mb.flash_erase_region(address, length, mem_id)
 
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -571,14 +546,10 @@ def efuse(ctx, index, value):
     read_value = 0
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            if value is not None:
-                mb.efuse_program_once(index, value)
-            read_value = mb.efuse_read_once(index)
-
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
+    with McuBoot(device, True) as mb:
+        if value is not None:
+            mb.efuse_program_once(index, value)
+        read_value = mb.efuse_read_once(index)
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -598,13 +569,10 @@ def otp(ctx, length, address, data):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            # TODO: write implementation
-            pass
+    with McuBoot(device, True) as mb:
+        # TODO: write implementation
+        pass
 
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -623,12 +591,9 @@ def resource(ctx, address, length, option, compress, file):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            data = mb.flash_read_resource(address, length, option)
+    with McuBoot(device, True) as mb:
+        data = mb.flash_read_resource(address, length, option)
 
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -665,15 +630,11 @@ def unlock(ctx, key):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            if key is None:
-                mb.flash_erase_all_unsecure()
-            else:
-                mb.flash_security_disable(key)
-
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
+    with McuBoot(device, True) as mb:
+        if key is None:
+            mb.flash_erase_all_unsecure()
+        else:
+            mb.flash_security_disable(key)
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -691,12 +652,9 @@ def fill(ctx, address, length, pattern):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            mb.fill_memory(address, length, pattern)
+    with McuBoot(device, True) as mb:
+        mb.fill_memory(address, length, pattern)
 
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -712,12 +670,8 @@ def update(ctx, address):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            mb.reliable_update(address)
-
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
+    with McuBoot(device, True) as mb:
+        mb.reliable_update(address)
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -732,12 +686,9 @@ def call(ctx, address, argument):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            mb.call(address, argument)
+    with McuBoot(device, True) as mb:
+        mb.call(address, argument)
 
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -755,12 +706,9 @@ def execute(ctx, address, argument, stackpointer):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            mb.execute(address, argument, stackpointer)
+    with McuBoot(device, True) as mb:
+        mb.execute(address, argument, stackpointer)
 
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -775,12 +723,8 @@ def reset(ctx):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            mb.reset(reopen=False)
-
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
+    with McuBoot(device, True) as mb:
+        mb.reset(reopen=False)
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -801,12 +745,8 @@ def keyblob(ctx, count, dekfile, blobfile):
     with open(dekfile, "rb") as f:
         dek_data = f.read()
 
-    try:
-        with McuBoot(device, True) as mb:
-            blob_data = mb.generate_key_blob(dek_data, count)
-
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
+    with McuBoot(device, True) as mb:
+        blob_data = mb.generate_key_blob(dek_data, count)
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -823,12 +763,8 @@ def kp_enroll(ctx):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            mb.kp_enroll()
-
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
+    with McuBoot(device, True) as mb:
+        mb.kp_enroll()
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -843,12 +779,9 @@ def kp_gen_key(ctx, key_type, key_size):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            mb.kp_set_intrinsic_key(key_type, key_size)
+    with McuBoot(device, True) as mb:
+        mb.kp_set_intrinsic_key(key_type, key_size)
 
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -866,12 +799,9 @@ def kp_user_key(ctx, key_type, file):
     with open(file, "rb") as f:
         key_data = f.read()
 
-    try:
-        with McuBoot(device, True) as mb:
-            mb.kp_set_user_key(key_type, key_data)
+    with McuBoot(device, True) as mb:
+        mb.kp_set_user_key(key_type, key_data)
 
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -885,12 +815,8 @@ def kp_write_nvm(ctx, memid):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            mb.kp_write_nonvolatile(memid)
-
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
+    with McuBoot(device, True) as mb:
+        mb.kp_write_nonvolatile(memid)
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -904,12 +830,9 @@ def kp_read_nvm(ctx, memid):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            mb.kp_read_nonvolatile(memid)
+    with McuBoot(device, True) as mb:
+        mb.kp_read_nonvolatile(memid)
 
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -927,12 +850,9 @@ def kp_write_kstore(ctx, key_type, file):
     with open(file, "rb") as f:
         key_data = f.read()
 
-    try:
-        with McuBoot(device, True) as mb:
-            mb.kp_write_key_store(key_type, key_data)
+    with McuBoot(device, True) as mb:
+        mb.kp_write_key_store(key_type, key_data)
 
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
 
     if ctx.obj['DEBUG']:
         click.echo()
@@ -946,12 +866,8 @@ def kp_read_kstore(ctx, file):
 
     device = scan_interface(ctx.obj['TARGET'])
 
-    try:
-        with McuBoot(device, True) as mb:
-            key_data = mb.kp_read_key_store()
-
-    except Exception as e:
-        print_error(str(e), ctx.obj['DEBUG'])
+    with McuBoot(device, True) as mb:
+        key_data = mb.kp_read_key_store()
 
     if ctx.obj['DEBUG']:
         click.echo()
