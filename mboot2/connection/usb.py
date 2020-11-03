@@ -11,7 +11,9 @@ import collections
 from time import time
 from struct import pack, unpack_from
 
-from fido2._pyu2f import hid, windows
+from fido2._pyu2f import hid
+if sys.platform.startswith('win32'):
+    from fido2._pyu2f import windows
 
 from .base import DevConnBase
 from ..commands import CmdPacket, parse_cmd_response

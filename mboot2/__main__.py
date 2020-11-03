@@ -10,8 +10,8 @@ import click
 import bincopy
 import traceback
 
-import mboot
-from mboot import McuBoot, scan_usb, ExtMemId, CommandTag, PropertyTag, parse_property_value
+import mboot2
+from mboot2 import McuBoot, scan_usb, ExtMemId, CommandTag, PropertyTag, parse_property_value
 
 
 ########################################################################################################################
