@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mboot2"
-version = "0.3.2"
+version = "0.3.3"
 description = "Python tool and library for interacting with NXP MCUBoot devices."
 authors = ["Martin Olejar, <martin.olejar@gmail.com>", "Conor Patrick, <conor@solokeys.com>"]
 repository = "https://github.com/conorpp/pyMBoot"

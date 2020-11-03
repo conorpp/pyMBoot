@@ -440,8 +440,8 @@ def write(ctx, address, offset, mtype, erase, verify, file):
         # Erase specified region in MCU Flash memory
         try:
             mb.flash_erase_region(start_address, length, mem_id)
-        except mboot.exceptions.McuBootCommandError as e:
-            if e.error_value == mboot.errorcodes.StatusCode.MEMORY_RANGE_INVALID:
+        except mboot2.exceptions.McuBootCommandError as e:
+            if e.error_value == mboot2.errorcodes.StatusCode.MEMORY_RANGE_INVALID:
                 pass
             else:
                 raise(e)
