@@ -326,15 +326,15 @@ def mlist(ctx):
 
 
 # McuBoot: configure external memory command
-@cli.command(short_help="Configure external memory")
+@cli.command(short_help="Configure memory")
 @click.option('-a', '--address', type=UInt(), default=None, help='Location inside RAM for storing config data')
 @click.option('-w', '--word', type=UInt(), multiple=True, default=None, help='Configuration word')
-@click.option('-t', '--mtype', type=click.Choice(MEMS[1:]), default='QSPI', show_default=True, help='Memory Type')
+@click.option('-t', '--mtype', type=UInt(), help='Memory type')
 @click.option('-f', '--file', type=ImgFile('.conf', exists=True), help='Memory configuration file')
 @click.pass_context
 def mconf(ctx, address, word, mtype, file):
 
-    memory_id = ExtMemId[mtype]
+    memory_id = mtype
     memory_data = bytes()
 
     if word:
@@ -364,7 +364,7 @@ def mconf(ctx, address, word, mtype, file):
             address -= 1024
 
         mb.write_memory(address, memory_data)
-        mb.configure_memory(memory_id, address)
+        mb.configure_memory(address, memory_id)
 
 
     if ctx.obj['DEBUG']:

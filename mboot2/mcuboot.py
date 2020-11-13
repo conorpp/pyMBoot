@@ -620,7 +620,7 @@ class McuBoot:
         :param address: The address in memory where are locating configuration data
         :param mem_id: External memory ID
         """
-        logger.info(f"CMD: ConfigureMemory({ExtMemId[mem_id]}, address=0x{address:08X})")
+        logger.info(f"CMD: ConfigureMemory({mem_id}, address=0x{address:08X})")
         cmd_packet = CmdPacket(CommandTag.CONFIGURE_MEMORY, 0, mem_id, address)
         cmd_response = self._process_cmd(cmd_packet)
         return self._check_response(cmd_packet, cmd_response)
